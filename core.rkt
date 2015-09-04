@@ -14,6 +14,9 @@
 ;;           (λ (name) (regexp-replace #rx"unsafe-" name ""))
 ;;           racket/unsafe/ops))
 
+(module+ test
+  (require rackunit))
+
 (provide load/execute loader execute opcode-tbl)
 
 (struct cpu-register
@@ -38,8 +41,6 @@
   #:transparent)
 
 (struct instruction (fn len amode))
-
-(define emulator-prompt (make-continuation-prompt-tag 'emulator))
 
 (define-syntax (instruction-set stx)
   (define (mnemonic-norm m)
@@ -609,6 +610,9 @@
    (TXS #x9A 1 implied)
    ))
 
+(module+ test
+  (check-eq? (hash-count opcode-tbl) 151))
+
 (define (load/execute obj)
   (execute (loader obj) (caar obj)))
 
@@ -628,6 +632,7 @@
   (define bpc (box initpc))
   (define register (cpu-register))
   (define status (cpu-status))
+  
   (define (load amode loc)
     (case amode
       [(immediate) loc]
@@ -660,6 +665,7 @@
          (bytes-ref memory addr))]
       [else
        (error "Unsupported memory load with mode" amode)]))
+  
   (define (store! amode loc val)
     (case amode
       [(stack)
@@ -686,7 +692,8 @@
                             (fxlshift (bytes-ref memory (8bit+ loc 1)) 8))]
               [addr (16bit+ base (cpu-register-yidx register))])
          (bytes-set! memory addr val))]
-      [else (error "Unsupported memory store with mode" amode)]))
+      [else (error "Unsupported memory store with mode")]))
+  
   (define (runloop [counter 0])
     (if (cpu-status-b status)
         counter

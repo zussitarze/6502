@@ -24,7 +24,7 @@
 (6502-test-case
  "All kinds of storage"
  '()
- (asm
+ (6502asm
   (lda (! 1))
   (sta #x50) ; #x50 <= 1
   ;;-------------------------
@@ -71,7 +71,7 @@
  "Find max (post-indexed)"
  '((#x41 . 5) (#x42 . 00) (#x43 . #x02)
    (#x201 . #x67) (#x202 . #x79) (#x203 . 15) (#x204 . #xe3) (#x205 . #x72))
- (asm
+ (6502asm
   (ldy #x41)
   (lda (! 0))
   (: "maximum")
@@ -90,7 +90,7 @@
  ;; get the value at address (#x60 + 0) and store it at the address (#x60 + 2)
  '((#x60 . #x2f) (#x61 . #x02) (#x62 . #x32) (#x63 . #x02)
    (#x022f . #x88))
- (asm
+ (6502asm
   (% EQU "nil" 0)
   (ldx (! "nil"))
   (lda (@ #x60 X))
@@ -103,7 +103,7 @@
 (6502-test-case
  "wordsplit2"
  '((#x40 . #x3f))
- (asm
+ (6502asm
   (lda #x40)
   (and (! #b00001111))
   (sta #x42)
@@ -118,7 +118,7 @@
 (6502-test-case
  "16bit add"
  '((#x40 . #x2A) (#x41 . #x67) (#x42 . #xf8) (#x43 . #x14))
- (asm
+ (6502asm
   (clc)
   (lda #x40)
   (adc #x42)
@@ -131,7 +131,7 @@
 (6502-test-case
  "Tests jumping and branching across segments"
  '()
- (asm
+ (6502asm
    (% ORG 10)
    (sec)
    (: "Loop")
@@ -151,7 +151,7 @@
 (6502-test-case
  "Lookup square"
  '()
- (asm
+ (6502asm
   (ldx (! 4))
   (lda #x60 X)
   (sta #x90)
@@ -167,7 +167,7 @@
 (6502-test-case
  "Adding sums of data"
  '((#x41 . #x03) (#x42 . #x28) (#x43 . #x55) (#x44 . #x26))
- (asm
+ (6502asm
    (lda (! 0))
    (ldx #x41)
    (: "SUMD")
@@ -183,7 +183,7 @@
  "Count negatives"
  '((#x41 . #x06) (#x42 . #x68) (#x43 . #xf2) (#x44 . #x87)
    (#x45 . #x30) (#x46 . #x59) (#x47 . #x2a))
- (asm
+ (6502asm
   (ldx (! 0))
   (ldy (! 0))
   (: "Sum")
@@ -201,7 +201,7 @@
 (6502-test-case
  "String length"
  '()
- (asm
+ (6502asm
    (ldx (! 0))
    (lda (! (char->integer #\newline)))
    (: "Check")
@@ -220,7 +220,7 @@
  "Bubble sort"
  '((#x40 . 6)
    (#x41 . #x2a) (#x42 . #xb5) (#x43 . #x60) (#x44 . #x3f) (#x45 . #xd1) (#x46 . #x19))
- (asm
+ (6502asm
    (: "sort")
    (ldy (! 0))
    (ldx #x40)
@@ -246,7 +246,7 @@
 (6502-test-case
  "Simple subroutine"
  '((#x40 . 13))
- (asm
+ (6502asm
   (ldx (! #xff))
   (txs)
   (lda #x40)

@@ -28,6 +28,12 @@
    (TXS)
    ))
 
+(define spinloop
+  (asm
+   (: "loop")
+   (adc (! 1))
+   (jmp "loop")))
+
 (define slow-loops
   (asm
    (% INCLUDE asm-init)
@@ -46,4 +52,5 @@
    ))
 
 (asmexec/output slow-loops)
+
 

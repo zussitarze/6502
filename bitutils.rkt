@@ -6,11 +6,9 @@
          racket/list
          racket/require)
 
-(require racket/fixnum)
-;; (require (filtered-in
-;;           (λ (name) (regexp-replace #rx"unsafe-" name ""))
-;;           racket/unsafe/ops))
-
+ (require (filtered-in
+           (λ (name) (regexp-replace #rx"unsafe-" name ""))
+           racket/unsafe/ops))
 
 (provide fx+multi 8bit+ 16bit+
          dumpbytes dumpobject)
