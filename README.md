@@ -12,5 +12,8 @@ To do:
  
 References:
 -----------
-  * [Lance A. Leventhal - 6502 Assembly Language Programming](http://www.amazon.com/Assembly-Language-Programming-Lance-Leventhal/dp/007881216X)
+
+  * Hyde, Randall. Using 6502 Assembly Language. Chatsworth, Calif.: Datamost Inc., 1981. Print.
+  * Leventhal, Lance A. 6502 Assembly Language Programming. Berkeley, Calif.: Osborne/McGraw-Hill, 1979. Print.
+
   
