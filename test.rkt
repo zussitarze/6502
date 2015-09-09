@@ -3,7 +3,8 @@
 (require rackunit
          "core.rkt"
          "assembler.rkt"
-         "bitutils.rkt")
+         "bitutils.rkt"
+         "object.rkt")
 
 (define-syntax 6502-test-case
   (syntax-rules ()
@@ -13,7 +14,7 @@
        (define mem (make-bytes (* 64 1024) 0))
        (for ([i initials])
          (bytes-set! mem (car i) (cdr i)))
-       (execute (loader obj #:use-ext-memory mem) (caar obj))
+       (execute (loader obj #:use-ext-memory mem) (section-start (car obj)))
        (with-check-info (['obj (dumpobject obj)]
                          ['page0 (dumpbytes (subbytes mem #x000 #x100))]
                          ['page1 (dumpbytes (subbytes mem #x100 #x200))]

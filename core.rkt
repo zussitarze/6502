@@ -1,13 +1,13 @@
 #lang racket/base
 
-(require "bitutils.rkt")
-
 (require (for-syntax racket/base)
          racket/include
          racket/list
          racket/match
          racket/require
-         racket/format)
+         racket/format
+         "bitutils.rkt"
+         "object.rkt")
 
 (require racket/fixnum)
 ;; (require (filtered-in
@@ -620,12 +620,12 @@
                 #:memory-size [memory-size (* 64 1024)]
                 #:use-ext-memory [extmem #f])
   (define memory (or extmem (make-bytes memory-size 0)))
-  (for/fold ([prev (caar obj)])
-            ([seg (in-list obj)])
-    (when (< (car seg) prev)
-      (error "Loader error: Object file contains overlapping segment at" (car seg)))
-    (bytes-copy! memory (car seg) (cdr seg))
-    (+ prev (bytes-length (cdr seg))))
+  (for/fold ([prev (section-start (car obj))])
+            ([sec (in-list obj)])
+    (when (< (section-start sec) prev)
+      (error "Loader error: Object file contains overlapping segment at" (section-start sec)))
+    (bytes-copy! memory (section-start sec) (section-seg sec))
+    (+ prev (bytes-length (section-seg sec))))
   memory)
 
 (define (execute memory initpc)

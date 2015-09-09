@@ -11,7 +11,7 @@
            racket/unsafe/ops))
 
 (provide fx+multi 8bit+ 16bit+
-         dumpbytes dumpobject)
+         dumpbytes)
 
 (define-syntax fx+multi
   (syntax-rules ()
@@ -41,8 +41,3 @@
         (string-append (if (> zs 0) (format "<0 ... ~a> " zs) "")
                        (hex dpl)))
       (hex (bytes->list bs))))
-
-(define (dumpobject obj)
-  (map (lambda (s)
-         (cons (car s) (dumpbytes (cdr s) #f)))
-       obj))

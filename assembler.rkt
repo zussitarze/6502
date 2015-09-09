@@ -3,9 +3,12 @@
 (require racket/match
          racket/port
          (only-in "core.rkt" opcode-tbl)
+         "object.rkt"
          (for-syntax racket/base))
 
-(provide 6502asm assemble)
+(provide 6502asm
+         assemble
+         (struct-out section))
 
 (define-syntax (6502asm stx)
   (syntax-case stx ()
@@ -44,14 +47,12 @@
           [() #'('stx-implied 0)])])
        #`(list 'operation '#,(normalize-sym #'mnemonic) amode operand))]))
 
-
-;; Used to prevent nesting of named sections
-(define in-section? (make-parameter #f))
+(define in-named-section? (make-parameter #f))
 
 ;; Assembles the source instructions into an object format
 (define (assemble source)
   (define-values (sections symtable deferred)
-    (parameterize ([in-section? #f])
+    (parameterize ([in-named-section? #f])
       (for/fold ([sections (list (new-section 0))]
                  [symtable (hash)]
                  [deferred '()])
@@ -59,13 +60,15 @@
         (asmline line sections symtable deferred))))  
   ;; Convert section streams to bytes
   (define bin-sections
-    (map (lambda (sec)
-           (cons (car sec) (get-output-bytes (cdr sec))))
+    (map (lambda (s)
+           (struct-copy section s [seg (get-output-bytes (section-seg s))]))
          sections))  
   ;; Patch in deferred label targets
   (for ([defer (in-list deferred)])
-    (match-let* ([(list amode name width secstart pos) defer]
-                 [(cons _ sec) (assoc secstart bin-sections)])
+    (match-let*
+        ([(list amode name width secstart pos) defer]
+         [(struct* section ([seg seg])) (findf (λ (s) (eqv? (section-start s) secstart))
+                                               bin-sections)])
       (cond
         [(eq? 'relative amode)
          ;; Relative branches are always 8 bit, offsets are counted
@@ -74,37 +77,37 @@
                 [offset (- addr ( + secstart pos) 1)])
            (if (or (> offset 127) (< offset -128))
                (error "Branch offset too large to" name)
-               (bytes-set! sec pos (if (< offset 0) (+ 256 offset) offset))))]
+               (bytes-set! seg pos (if (< offset 0) (+ 256 offset) offset))))]
         [else 
          (let ([val (get-symbol symtable name (badlabel name))])
            (case width
              [(8)
-              (bytes-set! sec pos val)]
+              (bytes-set! seg pos val)]
              [(16)
-              (bytes-set! sec pos (bitwise-and #xff val))
-              (bytes-set! sec (+ pos 1) (arithmetic-shift val -8))]))])))  
+              (bytes-set! seg pos (bitwise-and #xff val))
+              (bytes-set! seg (+ pos 1) (arithmetic-shift val -8))]))])))  
   (sort (filter (λ (s)
-                  (not (zero? (bytes-length (cdr s)))))
+                  (not (zero? (bytes-length (section-seg s)))))
                 bin-sections)
         <
-        #:key car))
+        #:key section-start))
 
 (define (asmline line sections symtable deferred)
   (match line
     [(list 'label l)
      (values sections
-             (add-symbol symtable l (+ (caar sections) (file-position (cdar sections))))
+             (add-symbol symtable l (+ (startar sections) (file-position (segar sections))))
              deferred)]
     [(list 'equ n v)
      (if (and (string? n) (integer? v))
          (values sections (add-symbol symtable n v) deferred)
          (error "Binding must be contain a string name and integer value"))]     
     [(list 'data-bytes bs ...)
-     (for-each (λ (b) (write-byte b (cdar sections))) bs)
+     (for-each (λ (b) (write-byte b (segar sections))) bs)
      (values sections symtable deferred)]
     [(list 'data-string s)
      (for ([b (in-bytes (if (bytes? s) s (string->bytes/latin-1 s)))])
-       (write-byte b (cdar sections)))
+       (write-byte b (segar sections)))
      (values sections symtable deferred)]
     [(list 'include included)
      (for/fold ([sections sections]
@@ -115,31 +118,31 @@
     [(list 'file path)
      (call-with-input-file path
        (λ (in)
-         (copy-port in (cdar sections))))
+         (copy-port in (segar sections))))
      (values sections symtable deferred)]     
     [(list 'section n s l ops)
-     (if (in-section?)
+     (if (in-named-section?)
          (error "Sections cannot be nested:" n)
          (let*-values
              ([(secs2 sym2 def2)
-               (parameterize ([in-section? #t])
-                 (for/fold ([sections (cons (new-section s) sections)]
+               (parameterize ([in-named-section? #t])
+                 (for/fold ([sections (cons (new-section s n) sections)]
                             [symtable (add-symbol symtable n s)]
                             [deferred deferred])
                            ([o (in-list ops)])
                    (asmline o sections symtable deferred)))])
-           (cond [(<= (file-position (cdar secs2)) l)
-                  (file-position (cdar secs2) l)
+           (cond [(<= (file-position (segar secs2)) l)
+                  (file-position (segar secs2) l)
                   (values (cons (new-section (+ s l)) secs2) sym2 def2)]
                  [else (error "Section code overflows its specified size:" n l)])))]
     [(list 'origin o)
      ;; If we are inside a section, advance the location counter
      ;; taking into account the section's inherent offset.  Otherwise,
-     ;; create a fresh section.
-     (cond [(in-section?)
-            (when (< o (+ (caar sections) (file-position (cdar sections))))
+     ;; create a fresh section at o.
+     (cond [(in-named-section?)
+            (when (< o (+ (startar sections) (file-position (segar sections))))
               (error "ORG cannot move backwards inside a segment" o))
-            (file-position (cdar sections) (- o (caar sections)))
+            (file-position (segar sections) (- o (startar sections)))
             (values sections symtable deferred)]
            [else
             (values (cons (new-section o) sections)
@@ -187,13 +190,13 @@
          ;; If val is a string at this point, it is a future reference
          ;; or relative mode branch.
          [(string? val)
-          (let ([argpos (+ (file-position (cdar sections)) 1)])
-            (write-machinecode opcode 0 width (cdar sections))
+          (let ([argpos (+ (file-position (segar sections)) 1)])
+            (write-machinecode opcode 0 width (segar sections))
             (values sections
                     symtable
-                    (cons (list amode val width (caar sections) argpos) deferred)))]
+                    (cons (list amode val width (startar sections) argpos) deferred)))]
          [else
-          (write-machinecode opcode val width (cdar sections))
+          (write-machinecode opcode val width (segar sections))
           (values sections symtable deferred)]))]))
 
 (define (write-machinecode opcode operand argwidth stream)
@@ -208,8 +211,14 @@
   (unless (= w 8)
     (error "Value must fit inside an 8bit range" v)))
 
-(define (new-section s)
-  (cons s (open-output-bytes)))
+(define (new-section start [name ""])
+  (section name start (open-output-bytes)))
+
+(define (segar sections)
+  (section-seg (car sections)))
+
+(define (startar sections)
+  (section-start (car sections)))
 
 (define (add-symbol st s v)
   (unless (string? s)

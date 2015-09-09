@@ -3,6 +3,7 @@
 (require "assembler.rkt"
          "bitutils.rkt"
          "core.rkt"
+         "object.rkt"
          racket/format
          racket/match)
 
