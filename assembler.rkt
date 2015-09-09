@@ -115,42 +115,42 @@
        (asmline l sections symtable deferred))]
     [(list 'section n s l ops)
      (if (in-section?)
-         (error "Sections cannot be nested" n)
+         (error "Sections cannot be nested:" n)
          (let*-values
              ([(secs2 sym2 def2)
                (parameterize ([in-section? #t])
                  (for/fold ([sections (cons (new-section s) sections)]
-                            [symtable symtable]
+                            [symtable (add-symbol symtable n s)]
                             [deferred deferred])
                            ([o (in-list ops)])
                    (asmline o sections symtable deferred)))])
-           (if (< (file-position (cdar secs2)) l)
-               (begin
-                 (file-position (cdar secs2) l)
-                 (values (cons (new-section (+ s l)) secs2) sym2 def2))
-               (error "Section code too large for specified size" n l))))]
+           (cond [(<= (file-position (cdar secs2)) l)
+                  (file-position (cdar secs2) l)
+                  (values (cons (new-section (+ s l)) secs2) sym2 def2)]
+                 [else (error "Section code overflows its specified size:" n l)])))]
     [(list 'origin o)
-     ;; If inside a section, advance the location counter.  Otherwise,
-     ;; begin a new segment.
+     ;; If we are inside a section, advance the location counter
+     ;; taking into account the section's inherent offset.  Otherwise,
+     ;; create a fresh section.
      (cond [(in-section?)
-            (when (< o (caar sections))
-              (error "ORG can only be used to advance a position inside a segment" o))
-            (file-position (cadr sections) o)
+            (when (< o (+ (caar sections) (file-position (cdar sections))))
+              (error "ORG cannot move backwards inside a segment" o))
+            (file-position (cdar sections) (- o (caar sections)))
             (values sections symtable deferred)]
            [else
             (values (cons (new-section o) sections)
                     symtable
                     deferred)])]
      [(list 'operation mnemonic stx-amode operand)
-      ;; Resolve label references if possible, otherwise defer
-      ;; writing their value. Note that non relative-mode future
-      ;; references must be assumed as being 16 bits, since their
-      ;; ultimate value depends on the size of the current variable
-      ;; length instruction.
+      ;; Resolve label references if possible, otherwise defer writing
+      ;; their value. Note that non relative-mode future references
+      ;; must be assumed as being 16 bits, since their ultimate value
+      ;; depends on the size of the current variable length
+      ;; instruction.
      (let* ([val (cond [(memq stx-amode '(stx-implied stx-accumulator)) 'none]
                        [(or (eq? stx-amode 'stx-relative) (integer? operand)) operand]
                        [(string? operand) (get-symbol symtable operand operand)]
-                       [else (error "Cannot resolve operand" operand)])]
+                       [else (error "Cannot resolve operand:" operand)])]
             [width (cond [(eq? val 'none) 0]
                          [(memq mnemonic '(jmp jsr)) 16]
                          [(eq? stx-amode 'stx-relative) 8]

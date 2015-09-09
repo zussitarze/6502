@@ -141,11 +141,10 @@
    (jmp "Loop")
    (nop)
    (nop)
-   (% ORG 50)
-   (: "Terminate")
-   (lda (! #x33))
-   (sta #x99)
-   (brk))
+   (% SECTION "Terminate" 50 10
+      ((lda (! #x33))
+       (sta #x99)
+       (brk))))
  '((#x99 . #x33)))
 
 (6502-test-case

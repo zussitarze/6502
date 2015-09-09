@@ -22,20 +22,20 @@
               register status))))
 
 (define asm-init
-  (asm
+  (6502asm
    (: "Reset")
    (LDX (! #xff))
    (TXS)
    ))
 
 (define spinloop
-  (asm
+  (6502asm
    (: "loop")
    (adc (! 1))
    (jmp "loop")))
 
 (define slow-loops
-  (asm
+  (6502asm
    (% INCLUDE asm-init)
    (LDY (! 255))
    (: "Outer")
@@ -51,6 +51,35 @@
    (BRK)
    ))
 
-(asmexec/output slow-loops)
+(define section-jump
+  (6502asm
+   (% SECTION "header" 2 10
+      ((% ORG 8)
+       (lda (! 1))
+       (lda (! 2))))
 
+   (lda (! 20))
+
+   (% ORG 0)
+   (lda (! 243))
+   
+   (% ORG 30)
+   (sec)
+   (: "Loop")
+   (nop)
+   (bcc "Terminate")
+   (clc)
+   (jmp "Loop")
+   (nop)
+   (nop)
+
+   (% SECTION "Terminate" 50 10
+      ((lda (! #x33))
+       (sta #x99)
+       (brk)))
+   ))
+
+(dumpobject (assemble section-jump))
+
+;(asmexec/output section-jump)
 
