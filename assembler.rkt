@@ -1,6 +1,7 @@
 #lang racket/base
 
 (require racket/match
+         racket/port
          (only-in "core.rkt" opcode-tbl)
          (for-syntax racket/base))
 
@@ -14,7 +15,7 @@
 (define-for-syntax (parse-asm-line stx)
   (define (normalize-sym s)
     (string->symbol (string-downcase (symbol->string (syntax->datum s)))))
-  (syntax-case stx (: % EQU SECTION ORG INCLUDE BYTE STRING INCLUDE)
+  (syntax-case stx (: % EQU SECTION ORG BYTE STRING INCLUDE FILE)
     [(% EQU n v) #'(list 'equ n v)] 
     [(% SECTION n s l (op ...))
      #`(list 'section n s l (list #,@(map parse-asm-line (syntax->list #'(op ...)))))]
@@ -22,6 +23,7 @@
     [(% BYTE bs ...) #'(list 'data-bytes bs ...)]
     [(% STRING s) #'(list 'data-string s)]
     [(% INCLUDE i) #'(list 'include i)]
+    [(% FILE f) #'(list 'file f)]
     [(% other ...)
      (raise-syntax-error #f "Invalid pseudo instruction" stx)]
     [(: l) #'(list 'label l)]
@@ -54,14 +56,12 @@
                  [symtable (hash)]
                  [deferred '()])
                 ([line source])
-        (asmline line sections symtable deferred))))
-  
+        (asmline line sections symtable deferred))))  
   ;; Convert section streams to bytes
   (define bin-sections
     (map (lambda (sec)
            (cons (car sec) (get-output-bytes (cdr sec))))
-         sections))
-  
+         sections))  
   ;; Patch in deferred label targets
   (for ([defer (in-list deferred)])
     (match-let* ([(list amode name width secstart pos) defer]
@@ -82,8 +82,7 @@
               (bytes-set! sec pos val)]
              [(16)
               (bytes-set! sec pos (bitwise-and #xff val))
-              (bytes-set! sec (+ pos 1) (arithmetic-shift val -8))]))])))
-  
+              (bytes-set! sec (+ pos 1) (arithmetic-shift val -8))]))])))  
   (sort (filter (λ (s)
                   (not (zero? (bytes-length (cdr s)))))
                 bin-sections)
@@ -113,6 +112,11 @@
                 [deferred deferred])                 
                ([l (in-list included)])
        (asmline l sections symtable deferred))]
+    [(list 'file path)
+     (call-with-input-file path
+       (λ (in)
+         (copy-port in (cdar sections))))
+     (values sections symtable deferred)]     
     [(list 'section n s l ops)
      (if (in-section?)
          (error "Sections cannot be nested:" n)
