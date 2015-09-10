@@ -18,12 +18,13 @@
 (define-for-syntax (parse-asm-line stx)
   (define (normalize-sym s)
     (string->symbol (string-downcase (symbol->string (syntax->datum s)))))
-  (syntax-case stx (: % EQU SECTION ORG BYTE STRING INCLUDE FILE)
+  (syntax-case stx (: % EQU SECTION ORG BYTE WORD STRING INCLUDE FILE)
     [(% EQU n v) #'(list 'equ n v)] 
     [(% SECTION n s l (op ...))
      #`(list 'section n s l (list #,@(map parse-asm-line (syntax->list #'(op ...)))))]
     [(% ORG l) #'(list 'origin l)]
     [(% BYTE bs ...) #'(list 'data-bytes bs ...)]
+    [(% WORD ws ...) #'(list 'data-words ws ...)]
     [(% STRING s) #'(list 'data-string s)]
     [(% INCLUDE i) #'(list 'include i)]
     [(% FILE f) #'(list 'file f)]
@@ -103,7 +104,22 @@
          (values sections (add-symbol symtable n v) deferred)
          (error "Binding must be contain a string name and integer value"))]     
     [(list 'data-bytes bs ...)
-     (for-each (λ (b) (write-byte b (segar sections))) bs)
+     (for-each
+      (λ (b)
+        (let ([b (if (string? b)
+                     (get-symbol symtable b)
+                     b)])
+          (write-byte b (segar sections))))
+      bs)
+     (values sections symtable deferred)]
+    [(list 'data-words ws ...)
+     (for-each
+      (λ (w)
+        (let ([w (if (string? w)
+                     (get-symbol symtable w)
+                     w)])
+          (write-bytes (integer->integer-bytes w 2 #f #f) (segar sections))))
+      ws)
      (values sections symtable deferred)]
     [(list 'data-string s)
      (for ([b (in-bytes (if (bytes? s) s (string->bytes/latin-1 s)))])
