@@ -3,7 +3,7 @@
 (require 6502/assembler
          racket/file
          "rom.rkt"
-         "examples.rkt")
+         (prefix-in tut: "examples/tutorial.rkt"))
 
 (define test-rom
   (build-path (find-system-path 'home-dir)
@@ -27,11 +27,9 @@
       (write-bytes (section-seg s) out))))
 
 (define (go)
-  (call-with-output-file "screen.nes" #:exists 'replace
+  (call-with-output-file "sprite.nes" #:exists 'replace
     (lambda (out)
-      (make-rom (assemble screen-test) out))))
+      (make-rom (assemble tut:sprite-test) out))))
 
-;(dump-chr (file->bytes "assets/mario.chr"))
 (go)
-(inspect-rom "screen.nes")
-
+(inspect-rom "sprite.nes")
