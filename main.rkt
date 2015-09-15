@@ -5,11 +5,6 @@
          "rom.rkt"
          (prefix-in tut: "examples/tutorial.rkt"))
 
-(define test-rom
-  (build-path (find-system-path 'home-dir)
-              "Dropbox" "nes" "roms" 
-              "Pac-Man (U) (Namco) [!p].nes"))
-
 (define (inspect-rom romfile)
   (define r (call-with-input-file romfile parse-rom))
   (values (print-rom-header (rom-header r))
@@ -27,9 +22,9 @@
       (write-bytes (section-seg s) out))))
 
 (define (go)
-  (call-with-output-file "sprite.nes" #:exists 'replace
+  (call-with-output-file "controller.nes" #:exists 'replace
     (lambda (out)
-      (make-rom (assemble tut:sprite-test) out))))
+      (make-rom (assemble tut:controller-test) out))))
 
 (go)
 (inspect-rom "sprite.nes")
