@@ -20,7 +20,7 @@
     (string->symbol (string-downcase (symbol->string (syntax->datum s)))))
   (syntax-case stx (: % EQU SECTION ORG BYTE WORD STRING INCLUDE FILE LOCAL FOR IF)
     [(% EQU n v) #'(list 'equ n v)] 
-    [(% SECTION n s l (op ...))
+    [(% SECTION n s l op ...)
      #`(list 'section n s l
              (flatten-lvl1 (list #,@(map parse-asm-line (syntax->list #'(op ...))))))]
     [(% ORG l) #'(list 'origin l)]

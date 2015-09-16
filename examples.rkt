@@ -55,9 +55,9 @@
 (define section-jump
   (6502asm
    (% SECTION "header" 2 10
-      ((% ORG 8)
-       (lda (! 1))
-       (lda (! 2))))
+      (% ORG 8)
+      (lda (! 1))
+      (lda (! 2)))
 
    (lda (! 20))
 
@@ -75,12 +75,37 @@
    (nop)
 
    (% SECTION "Terminate" 50 10
-      ((lda (! #x33))
-       (sta #x99)
-       (brk)))
+      (lda (! #x33))
+      (sta #x99)
+      (brk))
    ))
 
-(dumpobject (assemble section-jump))
+;(dumpobject (assemble section-jump))
 
-;(asmexec/output section-jump)
+(6502asm
+ (lda #x4016) ;; Read A
+ (lda #x4016) ;; Read B
+ (lda #x4016) ;; Read Select
+ (lda #x4016) ;; Read Start
 
+ (% FOR ([delta '(-1 1 -1 1)]
+         [offset '(0 0 3 3)])
+    (% LOCAL (done loop)
+       (lda #x4016)
+       (and (! 1))
+       (beq done)
+       (ldx (! offset))
+       (: loop)
+       (lda #x0200 X)
+       (clc)
+       (adc (! delta))
+       (sta #x0200 X)
+       (txa)
+       (clc)
+       (adc (! 4))
+       (tax)
+       (cpx (! (+ 16 offset)))
+       (bne loop)
+       (: done)))
+ 
+ (rti))

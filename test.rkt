@@ -143,9 +143,9 @@
    (nop)
    (nop)
    (% SECTION "Terminate" 50 10
-      ((lda (! #x33))
-       (sta #x99)
-       (brk))))
+      (lda (! #x33))
+      (sta #x99)
+      (brk)))
  '((#x99 . #x33)))
 
 (6502-test-case
