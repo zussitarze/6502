@@ -4,49 +4,11 @@
          racket/port
          (only-in "core.rkt" opcode-tbl)
          "object.rkt"
-         (for-syntax racket/base))
+         "asm-macros.rkt")
 
 (provide 6502asm
          assemble
          (struct-out section))
-
-(define-syntax (6502asm stx)
-  (syntax-case stx ()
-    [(asm l ...) 
-     #`(list #,@(map parse-asm-line (syntax->list #'(l ...))))]))
-
-(define-for-syntax (parse-asm-line stx)
-  (define (normalize-sym s)
-    (string->symbol (string-downcase (symbol->string (syntax->datum s)))))
-  (syntax-case stx (: % EQU SECTION ORG BYTE WORD STRING INCLUDE FILE)
-    [(% EQU n v) #'(list 'equ n v)] 
-    [(% SECTION n s l (op ...))
-     #`(list 'section n s l (list #,@(map parse-asm-line (syntax->list #'(op ...)))))]
-    [(% ORG l) #'(list 'origin l)]
-    [(% BYTE bs ...) #'(list 'data-bytes bs ...)]
-    [(% WORD ws ...) #'(list 'data-words ws ...)]
-    [(% STRING s) #'(list 'data-string s)]
-    [(% INCLUDE i) #'(list 'include i)]
-    [(% FILE f) #'(list 'file f)]
-    [(% other ...)
-     (raise-syntax-error #f "Invalid pseudo instruction" stx)]
-    [(: l) #'(list 'label l)]
-    [(mnemonic arg ...)
-     (with-syntax
-       ([(amode operand)
-        (syntax-case #'(arg ...) (! @ ^ X Y A)
-          [((! v)) #'('stx-immediate v)]
-          [((@ v X)) #'('stx-pre-indexed-x v)]
-          [((@ v) Y) #'('stx-post-indexed-y v)]
-          [((@ v)) #'('stx-indirect v)]
-          [(A) #'('stx-accumulator 'none)]
-          [(v X) #'('stx-idx-x v)]
-          [(v Y) #'('stx-idx-y v)]
-          [(v) (if (memq (normalize-sym #'mnemonic) '(bcc bcs beq bne bmi bpl bvc bvs))
-                   #'('stx-relative v)
-                   #'('stx-direct v))]
-          [() #'('stx-implied 0)])])
-       #`(list 'operation '#,(normalize-sym #'mnemonic) amode operand))]))
 
 (define in-named-section? (make-parameter #f))
 
@@ -63,7 +25,7 @@
   (define bin-sections
     (map (lambda (s)
            (struct-copy section s [seg (get-output-bytes (section-seg s))]))
-         sections))  
+         sections))
   ;; Patch in deferred label targets
   (for ([defer (in-list deferred)])
     (match-let*
@@ -125,12 +87,6 @@
      (for ([b (in-bytes (if (bytes? s) s (string->bytes/latin-1 s)))])
        (write-byte b (segar sections)))
      (values sections symtable deferred)]
-    [(list 'include included)
-     (for/fold ([sections sections]
-                [symtable symtable]
-                [deferred deferred])                 
-               ([l (in-list included)])
-       (asmline l sections symtable deferred))]
     [(list 'file path)
      (call-with-input-file path
        (λ (in)
