@@ -27,4 +27,4 @@
       (make-rom (assemble tut:controller-test) out))))
 
 (go)
-(inspect-rom "sprite.nes")
+(inspect-rom "controller.nes")
