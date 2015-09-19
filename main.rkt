@@ -22,9 +22,9 @@
       (write-bytes (section-seg s) out))))
 
 (define (go)
-  (call-with-output-file "controller.nes" #:exists 'replace
+  (call-with-output-file "background.nes" #:exists 'replace
     (lambda (out)
-      (make-rom (assemble tut:controller-test) out))))
+      (make-rom (assemble tut:background-test) out))))
 
 (go)
-(inspect-rom "controller.nes")
+(inspect-rom "background.nes")
