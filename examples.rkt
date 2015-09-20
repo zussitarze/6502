@@ -82,30 +82,31 @@
 
 ;(dumpobject (assemble section-jump))
 
-(6502asm
- (lda #x4016) ;; Read A
- (lda #x4016) ;; Read B
- (lda #x4016) ;; Read Select
- (lda #x4016) ;; Read Start
+;; (6502asm
+;;  (lda #x4016) ;; Read A
+;;  (lda #x4016) ;; Read B
+;;  (lda #x4016) ;; Read Select
+;;  (lda #x4016) ;; Read Start
 
- (% FOR ([delta '(-1 1 -1 1)]
-         [offset '(0 0 3 3)])
-    (% LOCAL (done loop)
-       (lda #x4016)
-       (and (! 1))
-       (beq done)
-       (ldx (! offset))
-       (: loop)
-       (lda #x0200 X)
-       (clc)
-       (adc (! delta))
-       (sta #x0200 X)
-       (txa)
-       (clc)
-       (adc (! 4))
-       (tax)
-       (cpx (! (+ 16 offset)))
-       (bne loop)
-       (: done)))
+;;  (% FOR ([delta '(-1 1 -1 1)]
+;;          [offset '(0 0 3 3)])
+;;     (% LOCAL (done loop)
+;;        (lda #x4016)
+;;        (and (! 1))
+;;        (beq done)
+;;        (ldx (! offset))
+;;        (: loop)
+;;        (lda #x0200 X)
+;;        (clc)
+;;        (adc (! delta))
+;;        (sta #x0200 X)
+;;        (txa)
+;;        (clc)
+;;        (adc (! 4))
+;;        (tax)
+;;        (cpx (! (+ 16 offset)))
+;;        (bne loop)
+;;        (: done)))
  
- (rti))
+;;  (rti))
+(asmexec/output slow-loops)

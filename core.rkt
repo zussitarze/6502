@@ -626,9 +626,12 @@
       (error "Loader error: Object file contains overlapping segment at" (section-start sec)))
     (bytes-copy! memory (section-start sec) (section-seg sec))
     (+ prev (bytes-length (section-seg sec))))
-  memory)
+  (case-lambda
+    [() memory]
+    [(addr) (bytes-ref memory addr)]
+    [(addr val) (bytes-set! memory addr val)]))
 
-(define (execute memory initpc)
+(define (execute bus initpc)
   (define bpc (box initpc))
   (define register (cpu-register))
   (define status (cpu-status))
@@ -639,30 +642,30 @@
       [(stack)
        (let ([sp (8bit+ (cpu-register-sp register) 1)])
          (set-cpu-register-sp! register sp)
-         (bytes-ref memory (fx+ #x0100 sp)))]
+         (bus (fx+ #x0100 sp)))]
       [(zero-direct absolute-direct)
-       (bytes-ref memory loc)]
+       (bus loc)]
       [(zero-idx-x)
-       (bytes-ref memory (8bit+ loc (cpu-register-xidx register)))]
+       (bus (8bit+ loc (cpu-register-xidx register)))]
       [(absolute-idx-x)
-       (bytes-ref memory (16bit+ loc (cpu-register-xidx register)))]
+       (bus (16bit+ loc (cpu-register-xidx register)))]
       [(zero-idx-y)
-       (bytes-ref memory (8bit+ loc (cpu-register-yidx register)))]
+       (bus (8bit+ loc (cpu-register-yidx register)))]
       [(absolute-idx-y)
-       (bytes-ref memory (16bit+ loc (cpu-register-yidx register)))]      
+       (bus (16bit+ loc (cpu-register-yidx register)))]      
       [(indirect)
-       (bytes-ref memory (16bit+ (bytes-ref memory loc)
-                                 (fxlshift (bytes-ref memory (8bit+ loc 1)) 8)))]
+       (bus (16bit+ (bus loc)
+                                 (fxlshift (bus (8bit+ loc 1)) 8)))]
       [(pre-indexed-x)
        (let* ([iaddr (8bit+ loc (cpu-register-xidx register))]
-              [addr (16bit+ (bytes-ref memory iaddr)
-                            (fxlshift (bytes-ref memory (8bit+ iaddr 1)) 8))])
-         (bytes-ref memory addr))]
+              [addr (16bit+ (bus iaddr)
+                            (fxlshift (bus (8bit+ iaddr 1)) 8))])
+         (bus addr))]
       [(post-indexed-y)
-       (let* ([base (16bit+ (bytes-ref memory loc)
-                            (fxlshift (bytes-ref memory (8bit+ loc 1)) 8))]
+       (let* ([base (16bit+ (bus loc)
+                            (fxlshift (bus (8bit+ loc 1)) 8))]
               [addr (16bit+ base (cpu-register-yidx register))])
-         (bytes-ref memory addr))]
+         (bus addr))]
       [else
        (error "Unsupported memory load with mode" amode)]))
   
@@ -670,41 +673,41 @@
     (case amode
       [(stack)
        (let ([sp (cpu-register-sp register)])
-         (bytes-set! memory (fx+ #x0100 sp) val)
+         (bus (fx+ #x0100 sp) val)
          (set-cpu-register-sp! register (fxand #xff (fx- sp 1))))]
       [(zero-direct absolute-direct)
-       (bytes-set! memory loc val)]
+       (bus loc val)]
       [(zero-idx-x)
-       (bytes-set! memory (8bit+ loc (cpu-register-xidx register)) val)]
+       (bus (8bit+ loc (cpu-register-xidx register)) val)]
       [(absolute-idx-x)
-       (bytes-set! memory (16bit+ loc (cpu-register-xidx register)) val)]
+       (bus (16bit+ loc (cpu-register-xidx register)) val)]
       [(zero-idx-y)
-       (bytes-set! memory (8bit+ loc (cpu-register-yidx register)) val)]
+       (bus (8bit+ loc (cpu-register-yidx register)) val)]
       [(absolute-idx-y)
-       (bytes-set! memory (16bit+ loc (cpu-register-yidx register)) val)]
+       (bus (16bit+ loc (cpu-register-yidx register)) val)]
       [(pre-indexed-x)
        (let* ([iaddr (8bit+ loc (cpu-register-xidx register))]
-              [addr (16bit+ (bytes-ref memory iaddr)
-                            (fxlshift (bytes-ref memory (8bit+ iaddr 1)) 8))])
-         (bytes-set! memory addr val))]
+              [addr (16bit+ (bus iaddr)
+                            (fxlshift (bus (8bit+ iaddr 1)) 8))])
+         (bus addr val))]
       [(post-indexed-y)
-       (let* ([base (16bit+ (bytes-ref memory loc)
-                            (fxlshift (bytes-ref memory (8bit+ loc 1)) 8))]
+       (let* ([base (16bit+ (bus loc)
+                            (fxlshift (bus (8bit+ loc 1)) 8))]
               [addr (16bit+ base (cpu-register-yidx register))])
-         (bytes-set! memory addr val))]
+         (bus addr val))]
       [else (error "Unsupported memory store with mode")]))
   
   (define (runloop [counter 0])
     (if (cpu-status-b status)
         counter
         (let* ([pc (unbox bpc)]
-               [i (vector-ref dispatch-tbl (bytes-ref memory pc))]
+               [i (vector-ref dispatch-tbl (bus pc))]
                [loc (case (instruction-len i)
                       [(1) #f]
-                      [(2) (bytes-ref memory (fx+ pc 1))]
-                      [(3) (fx+ (bytes-ref memory (fx+ pc 1))
-                                (fxlshift (bytes-ref memory (fx+ pc 2)) 8))])])
+                      [(2) (bus (fx+ pc 1))]
+                      [(3) (fx+ (bus (fx+ pc 1))
+                                (fxlshift (bus (fx+ pc 2)) 8))])])
           (set-box! bpc (fx+ pc (instruction-len i)))
           ((instruction-fn i) bpc register status (instruction-amode i) loc load store!)
           (runloop (fx+ counter 1)))))
-  (values (runloop) register status memory))
+  (values (runloop) register status (bus))) ;; bus->mem temp solution 
