@@ -614,7 +614,7 @@
   (check-eq? (hash-count opcode-tbl) 151))
 
 (define (load/execute obj)
-  (execute (loader obj) (caar obj)))
+  (execute (loader obj) (section-start (car obj))))
 
 (define (loader obj
                 #:memory-size [memory-size (* 64 1024)]
