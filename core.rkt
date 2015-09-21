@@ -106,11 +106,11 @@
         (store! amode loc res)))
   pc)
 
-(define (offset-program-counter! pc offset)
-  (let ([res (if (bitwise-bit-set? offset 7)
-                 (fx- offset 256)
-                 offset)])
-    (set-box! pc (8bit+ res (unbox pc)))))
+(define-syntax-rule (offset-program-counter! pc offset)
+  (set-box! pc (8bit+ (if (bitwise-bit-set? offset 7)
+                          (fx- offset 256)
+                          offset)
+                      (unbox pc))))
 
 (define (instr-bcc pc reg st amode loc load store!)
   (unless (cpu-status-c st)
