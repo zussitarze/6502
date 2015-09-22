@@ -7,7 +7,6 @@ To-do:
 ------
 
   * Try not to have the world's most unfriendly parse errors.
-  * Provide external interface to memory (for I/O)
   * Simulate NMI, IRQ, RESET interrupts.
   * Handle BCD mode (D flag is currently ignored)
   * Write a disassembler.
