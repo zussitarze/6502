@@ -1,6 +1,6 @@
 #lang racket/base
 
-(require 6502/assembler
+(require "../assembler.rkt"
          racket/file
          "rom.rkt"
          (prefix-in tut: "examples/tutorial.rkt"))

@@ -1,7 +1,7 @@
 #lang racket/base
 
-(require 6502/assembler
-         6502/object)
+(require "../assembler"
+         "../object")
 
 (provide sound-test)
 
@@ -16,8 +16,8 @@
 
    (% SECTION "PROGRAM" #x8000 (- (* 32 1024) 6)
       (: "irq")
-      (: "nmi")
       (: "reset")
+      (: "nmi")
       (lda (! 1))
       (sta #x4015)
       (lda (! #x9f))
@@ -27,6 +27,6 @@
 
       (: "forever")
       (jmp "forever"))
-   
+
    (% SECTION "VECTORS" #xFFFA 6
       (% WORD "nmi" "reset" "irq"))))

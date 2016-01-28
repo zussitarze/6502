@@ -1,6 +1,6 @@
 #lang racket/base
 
-(require 6502/bitutils
+(require "../bitutils.rkt"
          racket/port
          racket/draw
          racket/bytes

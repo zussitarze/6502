@@ -1,7 +1,7 @@
 #lang racket/base
 
-(require 6502/assembler
-         6502/object)
+(require "../../assembler.rkt"
+         "../../object.rkt")
 
 (provide background-test)
 
