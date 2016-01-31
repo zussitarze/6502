@@ -40,7 +40,7 @@
   #:auto-value #f
   #:transparent)
 
-(struct instruction (fn len amode))
+(struct instruction (fn len period amode))
 
 (define-syntax (instruction-set stx)
   (define (mnemonic-norm m)
@@ -49,7 +49,7 @@
     (string->symbol
      (string-append "instr-" (string-downcase (symbol->string (syntax->datum m))))))
   (syntax-case stx ()
-    [(instruction-set (mne op size amode) ...)
+    [(instruction-set (mne op size period amode) ...)
      (with-syntax
          ([(mne-norm ...) (map mnemonic-norm (syntax->list #'(mne ...)))]
           [(fn ...) (map mnemonic-instr (syntax->list #'(mne ...)))])
@@ -57,7 +57,7 @@
                [dispatch-tbl (make-vector 256 #f)])
            (begin
              (hash-set! opcode-tbl (cons 'mne-norm 'amode) op) ...
-             (vector-set! dispatch-tbl op (instruction fn size 'amode)) ...
+             (vector-set! dispatch-tbl op (instruction fn size period 'amode)) ...
              (values opcode-tbl dispatch-tbl))))]))
 
 (define (instr-adc pc reg st amode loc load store!)
@@ -423,191 +423,191 @@
 
 (define-values (opcode-tbl dispatch-tbl)
   (instruction-set
-   (ADC #x61 2 pre-indexed-x)
-   (ADC #x65 2 zero-direct)
-   (ADC #x69 2 immediate)
-   (ADC #x6D 3 absolute-direct)
-   (ADC #x71 2 post-indexed-y)
-   (ADC #x75 2 zero-idx-x)
-   (ADC #x79 3 absolute-idx-y)
-   (ADC #x7D 3 absolute-idx-x)
-   
-   (AND #x21 2 pre-indexed-x)
-   (AND #x25 2 zero-direct)
-   (AND #x29 2 immediate)
-   (AND #x2D 3 absolute-direct)
-   (AND #x31 2 post-indexed-y)
-   (AND #x35 2 zero-idx-x)
-   (AND #x39 3 absolute-idx-y)
-   (AND #x3D 3 absolute-idx-x)
-   
-   (ASL #x0A 1 accumulator)
-   (ASL #x06 2 zero-direct)
-   (ASL #x0E 3 absolute-direct)
-   (ASL #x16 2 zero-idx-x)
-   (ASL #x1E 3 absolute-idx-x)
-   
-   (BCC #x90 2 relative)
-   (BCS #xB0 2 relative)
-   (BEQ #xF0 2 relative)
-   (BMI #x30 2 relative)
-   (BNE #xD0 2 relative)
-   (BPL #x10 2 relative)
-   (BVC #x50 2 relative)
-   (BVS #x70 2 relative)
-   
-   (BIT #x24 2 zero-direct)
-   (BIT #x2C 3 absolute-direct)
-   
-   (BRK #x00 1 implied)
-   
-   (CLC #x18 1 implied)
-   (CLD #xD8 1 implied)
-   (CLI #x58 1 implied)
-   (CLV #xB8 1 implied)
-   
-   (CMP #xC1 2 pre-indexed-x)
-   (CMP #xC5 2 zero-direct)
-   (CMP #xC9 2 immediate)
-   (CMP #xCD 3 absolute-direct)
-   (CMP #xD1 2 post-indexed-y)
-   (CMP #xD5 2 zero-idx-x)
-   (CMP #xD9 3 absolute-idx-y)
-   (CMP #xDD 3 absolute-idx-x)
-   
-   (CPX #xE0 2 immediate)
-   (CPX #xE4 2 zero-direct)
-   (CPX #xEC 3 absolute-direct)
-   
-   (CPY #xC0 2 immediate)
-   (CPY #xC4 2 zero-direct)
-   (CPY #xCC 3 absolute-direct)
-   
-   (DEC #xC6 2 zero-direct)
-   (DEC #xCE 3 absolute-direct)
-   (DEC #xD6 2 zero-idx-x)
-   (DEC #xDE 3 absolute-idx-x)
-   
-   (DEX #xCA 1 implied)
-   (DEY #x88 1 implied)
-   
-   (EOR #x41 2 pre-indexed-x)
-   (EOR #x45 2 zero-direct)
-   (EOR #x49 2 immediate)
-   (EOR #x4D 3 absolute-direct)
-   (EOR #x51 2 post-indexed-y)
-   (EOR #x55 2 zero-idx-x)
-   (EOR #x59 3 absolute-idx-y)
-   (EOR #x5D 3 absolute-idx-x)
-   
-   (INC #xE6 2 zero-direct)
-   (INC #xEE 3 absolute-direct)
-   (INC #xF6 2 zero-idx-x)
-   (INC #xFE 3 absolute-idx-x)
-   
-   (INX #xE8 1 implied)
-   (INY #xC8 1 implied)
-   
-   (JMP #x4C 3 absolute-direct)
-   (JMP #x6C 3 indirect)
-   
-   (JSR #x20 3 absolute-direct)
-   
-   (LDA #xA1 2 pre-indexed-x)
-   (LDA #xA5 2 zero-direct)
-   (LDA #xA9 2 immediate)
-   (LDA #xAD 3 absolute-direct)
-   (LDA #xB1 2 post-indexed-y)
-   (LDA #xB5 2 zero-idx-x)
-   (LDA #xB9 3 absolute-idx-y)
-   (LDA #xBD 3 absolute-idx-x)
-   
-   (LDX #xA2 2 immediate)
-   (LDX #xA6 2 zero-direct)
-   (LDX #xAE 3 absolute-direct)
-   (LDX #xB6 2 zero-idx-y)
-   (LDX #xBE 3 absolute-idx-y)
-   
-   (LDY #xA0 2 immediate)
-   (LDY #xA4 2 zero-direct)
-   (LDY #xAC 3 absolute-direct)
-   (LDY #xB4 2 zero-idx-x)
-   (LDY #xBC 3 absolute-idx-x)
-   
-   (LSR #x4a 1 accumulator)
-   (LSR #x46 2 zero-direct)
-   (LSR #x4E 3 absolute-direct)
-   (LSR #x56 2 zero-idx-x)
-   (LSR #x5E 3 absolute-idx-x)
-   
-   (NOP #xEA 1 implied)
-   
-   (ORA #x01 2 pre-indexed-x)
-   (ORA #x05 2 zero-direct)
-   (ORA #x09 2 immediate)
-   (ORA #x0D 3 absolute-direct)
-   (ORA #x11 2 post-indexed-y)
-   (ORA #x15 2 zero-idx-x)
-   (ORA #x19 3 absolute-idx-y)
-   (ORA #x1D 3 absolute-idx-x)
-   
-   (PHA #x48 1 implied)
-   (PLA #x68 1 implied)
-   (PHP #x08 1 implied)
-   (PLP #x28 1 implied)
-   
-   (ROL #x2A 1 accumulator)
-   (ROL #x26 2 zero-direct)
-   (ROL #x2E 3 absolute-direct)
-   (ROL #x36 2 zero-idx-x)
-   (ROL #x3E 3 absolute-idx-x)
-   
-   (ROR #x6A 1 accumulator)
-   (ROR #x66 2 zero-direct)
-   (ROR #x6E 3 absolute-direct)
-   (ROR #x76 2 zero-idx-x)
-   (ROR #x7E 3 absolute-idx-x)
-   
-   (RTI #x40 1 implied)
-   (RTS #x60 1 implied)
-   
-   (SBC #xE1 2 pre-indexed-x)
-   (SBC #xE5 2 zero-direct)
-   (SBC #xE9 2 immediate)
-   (SBC #xED 3 absolute-direct)
-   (SBC #xF1 2 post-indexed-y)
-   (SBC #xF5 2 zero-idx-x)
-   (SBC #xF9 3 absolute-idx-y)
-   (SBC #xFD 3 absolute-idx-x)
-   
-   (SEI #x78 1 implied)
-   (SED #xF8 1 implied)
-   (SEC #x38 1 implied)
-   
-   (STA #x81 2 pre-indexed-x)
-   (STA #x85 2 zero-direct)
-   (STA #x8D 3 absolute-direct)
-   (STA #x91 2 post-indexed-y)
-   (STA #x95 2 zero-idx-x)
-   (STA #x99 3 absolute-idx-y)
-   (STA #x9D 3 absolute-idx-x)
-   
-   (STX #x86 2 zero-direct)
-   (STX #x8E 3 absolute-direct)
-   (STX #x96 2 zero-idx-y)
-   
-   (STY #x84 2 zero-direct)
-   (STY #x8C 3 absolute-direct)
-   (STY #x94 2 zero-idx-x)
-   
-   (TAX #xAA 1 implied)
-   (TXA #x8A 1 implied)
-   
-   (TAY #xA8 1 implied)
-   (TYA #x98 1 implied)
-   
-   (TSX #xBA 1 implied)
-   (TXS #x9A 1 implied)
+   (ADC #x61 2 6 pre-indexed-x)
+   (ADC #x65 2 3 zero-direct)
+   (ADC #x69 2 2 immediate)
+   (ADC #x6D 3 4 absolute-direct)
+   (ADC #x71 2 5 post-indexed-y)
+   (ADC #x75 2 4 zero-idx-x)
+   (ADC #x79 3 4 absolute-idx-y)
+   (ADC #x7D 0 4 absolute-idx-x)
+
+   (AND #x21 2 6 pre-indexed-x)
+   (AND #x25 2 3 zero-direct)
+   (AND #x29 2 2 immediate)
+   (AND #x2D 3 4 absolute-direct)
+   (AND #x31 2 5 post-indexed-y)
+   (AND #x35 2 4 zero-idx-x)
+   (AND #x39 3 4 absolute-idx-y)
+   (AND #x3D 3 4 absolute-idx-x)
+
+   (ASL #x0A 1 2 accumulator)
+   (ASL #x06 2 5 zero-direct)
+   (ASL #x0E 3 6 absolute-direct)
+   (ASL #x16 2 6 zero-idx-x)
+   (ASL #x1E 3 7 absolute-idx-x)
+
+   (BCC #x90 2 2 relative)
+   (BCS #xB0 2 2 relative)
+   (BEQ #xF0 2 2 relative)
+   (BMI #x30 2 2 relative)
+   (BNE #xD0 2 2 relative)
+   (BPL #x10 2 2 relative)
+   (BVC #x50 2 2 relative)
+   (BVS #x70 0 2 relative)
+
+   (BIT #x24 2 3 zero-direct)
+   (BIT #x2C 3 4 absolute-direct)
+
+   (BRK #x00 1 7 implied)
+
+   (CLC #x18 1 2 implied)
+   (CLD #xD8 1 2 implied)
+   (CLI #x58 1 2 implied)
+   (CLV #xB8 1 2 implied)
+
+   (CMP #xC1 2 6 pre-indexed-x)
+   (CMP #xC5 2 3 zero-direct)
+   (CMP #xC9 2 2 immediate)
+   (CMP #xCD 3 4 absolute-direct)
+   (CMP #xD1 2 5 post-indexed-y)
+   (CMP #xD5 2 4 zero-idx-x)
+   (CMP #xD9 3 4 absolute-idx-y)
+   (CMP #xDD 3 4 absolute-idx-x)
+
+   (CPX #xE0 2 2 immediate)
+   (CPX #xE4 2 3 zero-direct)
+   (CPX #xEC 3 4 absolute-direct)
+
+   (CPY #xC0 2 2 immediate)
+   (CPY #xC4 2 3 zero-direct)
+   (CPY #xCC 3 4 absolute-direct)
+
+   (DEC #xC6 2 5 zero-direct)
+   (DEC #xCE 3 6 absolute-direct)
+   (DEC #xD6 2 6 zero-idx-x)
+   (DEC #xDE 3 7 absolute-idx-x)
+
+   (DEX #xCA 1 2 implied)
+   (DEY #x88 1 2 implied)
+
+   (EOR #x41 2 6 pre-indexed-x)
+   (EOR #x45 2 3 zero-direct)
+   (EOR #x49 2 2 immediate)
+   (EOR #x4D 3 4 absolute-direct)
+   (EOR #x51 2 5 post-indexed-y)
+   (EOR #x55 2 4 zero-idx-x)
+   (EOR #x59 3 4 absolute-idx-y)
+   (EOR #x5D 3 4 absolute-idx-x)
+
+   (INC #xE6 2 5 zero-direct)
+   (INC #xEE 3 6 absolute-direct)
+   (INC #xF6 2 6 zero-idx-x)
+   (INC #xFE 3 7 absolute-idx-x)
+
+   (INX #xE8 1 2 implied)
+   (INY #xC8 1 2 implied)
+
+   (JMP #x4C 3 3 absolute-direct)
+   (JMP #x6C 3 5 indirect)
+
+   (JSR #x20 3 6 absolute-direct)
+
+   (LDA #xA1 2 6 pre-indexed-x)
+   (LDA #xA5 2 3 zero-direct)
+   (LDA #xA9 2 2 immediate)
+   (LDA #xAD 3 4 absolute-direct)
+   (LDA #xB1 2 5 post-indexed-y)
+   (LDA #xB5 2 4 zero-idx-x)
+   (LDA #xB9 3 4 absolute-idx-y)
+   (LDA #xBD 3 4 absolute-idx-x)
+
+   (LDX #xA2 2 2 immediate)
+   (LDX #xA6 2 3 zero-direct)
+   (LDX #xAE 3 4 absolute-direct)
+   (LDX #xB6 2 4 zero-idx-y)
+   (LDX #xBE 3 4 absolute-idx-y)
+
+   (LDY #xA0 2 2 immediate)
+   (LDY #xA4 2 3 zero-direct)
+   (LDY #xAC 3 4 absolute-direct)
+   (LDY #xB4 2 4 zero-idx-x)
+   (LDY #xBC 3 4 absolute-idx-x)
+
+   (LSR #x4a 1 2 accumulator)
+   (LSR #x46 2 5 zero-direct)
+   (LSR #x4E 3 6 absolute-direct)
+   (LSR #x56 2 6 zero-idx-x)
+   (LSR #x5E 3 7 absolute-idx-x)
+
+   (NOP #xEA 1 2 implied)
+
+   (ORA #x01 2 6 pre-indexed-x)
+   (ORA #x05 2 3 zero-direct)
+   (ORA #x09 2 2 immediate)
+   (ORA #x0D 3 4 absolute-direct)
+   (ORA #x11 2 5 post-indexed-y)
+   (ORA #x15 2 4 zero-idx-x)
+   (ORA #x19 3 4 absolute-idx-y)
+   (ORA #x1D 3 4 absolute-idx-x)
+
+   (PHA #x48 1 3 implied)
+   (PLA #x68 1 4 implied)
+   (PHP #x08 1 3 implied)
+   (PLP #x28 1 4 implied)
+
+   (ROL #x2A 1 2 accumulator)
+   (ROL #x26 2 5 zero-direct)
+   (ROL #x2E 3 6 absolute-direct)
+   (ROL #x36 2 6 zero-idx-x)
+   (ROL #x3E 3 7 absolute-idx-x)
+
+   (ROR #x6A 1 2 accumulator)
+   (ROR #x66 2 5 zero-direct)
+   (ROR #x6E 3 6 absolute-direct)
+   (ROR #x76 2 6 zero-idx-x)
+   (ROR #x7E 3 7 absolute-idx-x)
+
+   (RTI #x40 1 6 implied)
+   (RTS #x60 1 6 implied)
+
+   (SBC #xE1 2 6 pre-indexed-x)
+   (SBC #xE5 2 3 zero-direct)
+   (SBC #xE9 2 2 immediate)
+   (SBC #xED 3 4 absolute-direct)
+   (SBC #xF1 2 5 post-indexed-y)
+   (SBC #xF5 2 4 zero-idx-x)
+   (SBC #xF9 3 4 absolute-idx-y)
+   (SBC #xFD 3 4 absolute-idx-x)
+
+   (SEI #x78 1 2 implied)
+   (SED #xF8 1 2 implied)
+   (SEC #x38 1 2 implied)
+
+   (STA #x81 2 6 pre-indexed-x)
+   (STA #x85 2 3 zero-direct)
+   (STA #x8D 3 4 absolute-direct)
+   (STA #x91 2 6 post-indexed-y)
+   (STA #x95 2 4 zero-idx-x)
+   (STA #x99 3 5 absolute-idx-y)
+   (STA #x9D 3 5 absolute-idx-x)
+
+   (STX #x86 2 3 zero-direct)
+   (STX #x8E 3 4 absolute-direct)
+   (STX #x96 2 4 zero-idx-y)
+
+   (STY #x84 2 3 zero-direct)
+   (STY #x8C 3 4 absolute-direct)
+   (STY #x94 2 4 zero-idx-x)
+
+   (TAX #xAA 1 2 implied)
+   (TXA #x8A 1 2 implied)
+
+   (TAY #xA8 1 2 implied)
+   (TYA #x98 1 2 implied)
+
+   (TSX #xBA 1 2 implied)
+   (TXS #x9A 1 2 implied)
    ))
 
 (module+ test
@@ -635,7 +635,7 @@
   (define bpc (box initpc))
   (define register (cpu-register))
   (define status (cpu-status))
-  
+
   (define (load amode loc)
     (case amode
       [(immediate) loc]
@@ -652,10 +652,10 @@
       [(zero-idx-y)
        (bus (8bit+ loc (cpu-register-yidx register)))]
       [(absolute-idx-y)
-       (bus (16bit+ loc (cpu-register-yidx register)))]      
+       (bus (16bit+ loc (cpu-register-yidx register)))]
       [(indirect)
        (bus (16bit+ (bus loc)
-                                 (fxlshift (bus (8bit+ loc 1)) 8)))]
+                    (fxlshift (bus (8bit+ loc 1)) 8)))]
       [(pre-indexed-x)
        (let* ([iaddr (8bit+ loc (cpu-register-xidx register))]
               [addr (16bit+ (bus iaddr)
@@ -668,7 +668,7 @@
          (bus addr))]
       [else
        (error "Unsupported memory load with mode" amode)]))
-  
+
   (define (store! amode loc val)
     (case amode
       [(stack)
@@ -696,7 +696,7 @@
               [addr (16bit+ base (cpu-register-yidx register))])
          (bus addr val))]
       [else (error "Unsupported memory store with mode")]))
-  
+
   (define (runloop [counter 0])
     (if (cpu-status-b status)
         counter
@@ -710,4 +710,4 @@
           (set-box! bpc (fx+ pc (instruction-len i)))
           ((instruction-fn i) bpc register status (instruction-amode i) loc load store!)
           (runloop (fx+ counter 1)))))
-  (values (runloop) register status (bus))) ;; bus->mem temp solution 
+  (values (runloop) register status (bus))) ;; bus->mem temp solution
