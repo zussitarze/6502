@@ -6,9 +6,8 @@ This project is a work in progress.  Developed in Racket.
 To-do:
 ------
 
-  * Try not to have the world's most unfriendly parse errors.
-  * Simulate NMI, IRQ, RESET interrupts.
-  * Handle BCD mode (D flag is currently ignored)
+  * Assembler syntax error reporting.
+  * Handle BCD mode (D flag is currently ignored).
   * Write a disassembler.
  
 References:

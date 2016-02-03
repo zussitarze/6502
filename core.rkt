@@ -289,14 +289,7 @@
     (set-cpu-register-acc! reg res)))
 
 (define (instr-php pc reg st amode loc load store!)
-  (let ([res (+ (if (cpu-status-c st) 1 0)
-                (if (cpu-status-z st) 2 0)
-                (if (cpu-status-i st) 4 0)
-                (if (cpu-status-d st) 8 0)
-                (if (cpu-status-b st) 16 0)
-                (if (cpu-status-v st) 64 0)
-                (if (cpu-status-s st) 128 0))])
-    (store! 'stack #f res)))
+  (push-status-stack st store!))
 
 (define (instr-plp pc reg st amode loc load store!)
   (let ([res (load 'stack #f)])
@@ -311,11 +304,7 @@
 (define (instr-brk  pc reg st amode loc load store!)
   (offset-program-counter! pc 1)
   (set-cpu-status-b! st #t)
-  (store! 'stack #f (fxrshift (unbox pc) 8))
-  (store! 'stack #f (fxand #xff (unbox pc)))
-  (instr-php pc reg st amode loc load store!)
-  (set-cpu-status-i! st #t)
-  (set-box! pc (load 'indirect #xFFFE)))
+  (interrupt #xFFFE pc st load store!))
 
 (define (instr-rti pc reg st amode loc load store!)
   (instr-plp pc reg st amode loc load store!)
@@ -620,6 +609,24 @@
     [(addr) (bytes-ref mem addr)]
     [(addr val) (bytes-set! mem addr val)]))
 
+(define (push-status-stack st store!)
+  (let ([val (+ (if (cpu-status-c st) 1 0)
+                (if (cpu-status-z st) 2 0)
+                (if (cpu-status-i st) 4 0)
+                (if (cpu-status-d st) 8 0)
+                (if (cpu-status-b st) 16 0)
+                (if (cpu-status-v st) 64 0)
+                (if (cpu-status-s st) 128 0))])
+    (store! 'stack #f val)))
+
+;; 16bit box status fn fn -> void
+(define (interrupt handler pc st load store!)
+  (store! 'stack #f (fxrshift (unbox pc) 8))
+  (store! 'stack #f (fxand #xff (unbox pc)))
+  (push-status-stack st store!)
+  (set-cpu-status-i! st #t)
+  (set-box! pc (load 'indirect handler)))
+
 ;; bus int chan -> thread
 (define (execute bus initpc [debug-chan #f])
   (define bpc (box initpc))
@@ -688,7 +695,12 @@
       [else (error "Unsupported memory store with mode")]))
 
   (define (runloop [counter 0])
-    ;; check for interrupts
+    (case (thread-try-receive)
+      [(NMI) (interrupt #xFFFA bpc status load store!)]
+      [(RESET) (and (not (cpu-status-i status))
+                     (interrupt #xFFFC bpc status load store!))]
+      [(IRQ) (and (not (cpu-status-i status))
+                   (interrupt #xFFFE bpc status load store!))])
     (if (cpu-status-b status)
         (when debug-chan
           (channel-put debug-chan (list counter register status (bus))))
