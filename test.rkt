@@ -12,9 +12,11 @@
      (test-case name
        (define obj (assemble source))
        (define mem (make-bytes (* 64 1024) 0))
+       (load-object obj mem)
        (for ([i initials])
          (bytes-set! mem (car i) (cdr i)))
-       (execute (loader obj #:use-ext-memory mem) (section-start (car obj)))
+       (thread-wait
+        (execute (bus-with-memory mem) (section-start (car obj))))
        (with-check-info (['obj (dumpobject obj)]
                          ['page0 (dumpbytes (subbytes mem #x000 #x100))]
                          ['page1 (dumpbytes (subbytes mem #x100 #x200))]
@@ -35,7 +37,7 @@
   ;;-------------------------
   (txa)
   (tay)
-  (iny)  
+  (iny)
   (sty #x52) ; #x52 <= 3
   ;;-------------------------
   (lda (! 4))
@@ -59,7 +61,7 @@
   ;;-------------------------
   (ldx (! 8))
   (ldy (! 2))
-  (stx #x56 Y) ; #x58 <= 8  
+  (stx #x56 Y) ; #x58 <= 8
   ;;-------------------------
   (lda (! 9))
   (ldy (! 2))
@@ -214,7 +216,7 @@
    (brk)
    (: "STR")
    (% STRING "Hello World!\n"))
- '((#x40 . 12)))   
+ '((#x40 . 12)))
 
 (6502-test-case
  "Bubble sort"
@@ -239,7 +241,7 @@
    (dex)
    (bne "pass")
    (dey)
-   (beq "sort")      
+   (beq "sort")
    (brk))
  '((#x41 . #x19) (#x42 . #x2a) (#x43 . #x3f) (#x44 . #x60) (#x45 . #xb5) (#x46 . #xd1)))
 

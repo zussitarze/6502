@@ -9,8 +9,16 @@
 
 (define (asmexec/output source [dump-object? #f])
   (define obj (assemble source))
-  (define-values (results cpu real gc) (time-apply load/execute (list obj)))
-  (match-let ([(list opcount register status memory) results])
+  (define mem (make-bytes (* 64 1024) 0))
+  (load-object obj mem)
+  (define debug-chan (make-channel))
+  (define-values (results cpu real gc)
+    (time-apply
+     (λ ()
+       (execute (bus-with-memory mem) 0 debug-chan)
+       (channel-get debug-chan))
+     '()))
+  (match-let ([(list opcount register status memory) (car results)])
     (let ([clock (if (zero? real)
                      -1
                      (/ (* opcount 4) (* real 1000)))])
@@ -51,6 +59,7 @@
    (BNE "Outer")
    (BRK)
    ))
+;;(asmexec/output slow-loops)
 
 (define section-jump
   (6502asm
@@ -63,7 +72,7 @@
 
    (% ORG 0)
    (lda (! 243))
-   
+
    (% ORG 30)
    (sec)
    (: "Loop")
@@ -79,8 +88,7 @@
       (sta #x99)
       (brk))
    ))
-
-;(dumpobject (assemble section-jump))
+(asmexec/output section-jump)
 
 ;; (6502asm
 ;;  (lda #x4016) ;; Read A
@@ -107,6 +115,5 @@
 ;;        (cpx (! (+ 16 offset)))
 ;;        (bne loop)
 ;;        (: done)))
- 
+
 ;;  (rti))
-(asmexec/output slow-loops)

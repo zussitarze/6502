@@ -17,7 +17,7 @@
 (module+ test
   (require rackunit))
 
-(provide load/execute loader execute opcode-tbl)
+(provide execute opcode-tbl bus-with-memory)
 
 (struct cpu-register
   ([acc #:auto]
@@ -613,25 +613,15 @@
 (module+ test
   (check-eq? (hash-count opcode-tbl) 151))
 
-(define (load/execute obj)
-  (execute (loader obj) (section-start (car obj))))
-
-(define (loader obj
-                #:memory-size [memory-size (* 64 1024)]
-                #:use-ext-memory [extmem #f])
-  (define memory (or extmem (make-bytes memory-size 0)))
-  (for/fold ([prev (section-start (car obj))])
-            ([sec (in-list obj)])
-    (when (< (section-start sec) prev)
-      (error "Loader error: Object file contains overlapping segment at" (section-start sec)))
-    (bytes-copy! memory (section-start sec) (section-seg sec))
-    (+ prev (bytes-length (section-seg sec))))
+;; bytes -> bus
+(define (bus-with-memory mem)
   (case-lambda
-    [() memory]
-    [(addr) (bytes-ref memory addr)]
-    [(addr val) (bytes-set! memory addr val)]))
+    [() mem]
+    [(addr) (bytes-ref mem addr)]
+    [(addr val) (bytes-set! mem addr val)]))
 
-(define (execute bus initpc)
+;; bus int chan -> thread
+(define (execute bus initpc [debug-chan #f])
   (define bpc (box initpc))
   (define register (cpu-register))
   (define status (cpu-status))
@@ -698,8 +688,10 @@
       [else (error "Unsupported memory store with mode")]))
 
   (define (runloop [counter 0])
+    ;; check for interrupts
     (if (cpu-status-b status)
-        counter
+        (when debug-chan
+          (channel-put debug-chan (list counter register status (bus))))
         (let* ([pc (unbox bpc)]
                [i (vector-ref dispatch-tbl (bus pc))]
                [loc (case (instruction-len i)
@@ -710,4 +702,4 @@
           (set-box! bpc (fx+ pc (instruction-len i)))
           ((instruction-fn i) bpc register status (instruction-amode i) loc load store!)
           (runloop (fx+ counter 1)))))
-  (values (runloop) register status (bus))) ;; bus->mem temp solution
+  (thread runloop))
