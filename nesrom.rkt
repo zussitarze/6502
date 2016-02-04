@@ -1,7 +1,7 @@
 #lang racket/base
 
-(require "../bitutils.rkt"
-         "../object.rkt"
+(require "bitutils.rkt"
+         "object.rkt"
          racket/port
          racket/draw
          racket/bytes

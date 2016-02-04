@@ -1,8 +1,8 @@
 #lang racket/base
 
-(require "../assembler.rkt"
-         "../object.rkt"
-         "rom.rkt"
+(require "assembler.rkt"
+         "object.rkt"
+         "nesrom.rkt"
          (prefix-in tut: "examples/tutorial.rkt")
          racket/file)
 

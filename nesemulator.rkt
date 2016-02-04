@@ -1,8 +1,8 @@
 #lang racket/base
 
-(require "rom.rkt"
-         "../bitutils.rkt"
-         (prefix-in core: "../core.rkt")
+(require "nesrom.rkt"
+         "bitutils.rkt"
+         (prefix-in core: "core.rkt")
          racket/match)
 
 (require racket/fixnum)
