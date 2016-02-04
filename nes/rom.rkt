@@ -1,12 +1,15 @@
 #lang racket/base
 
 (require "../bitutils.rkt"
+         "../object.rkt"
          racket/port
          racket/draw
          racket/bytes
          racket/class
          racket/list)
-         
+
+(struct rom (header prg chr))
+
 (struct header (prg-pages
                 chr-pages
                 vertical-mirroring?
@@ -16,40 +19,41 @@
                 mapper
                 8kram))
 
-(struct rom (header prg chr))
-
 (provide (struct-out rom)
          (struct-out header)
          print-rom-header
-         parse-rom
+         read-rom
          dump-chr)
 
-(define (print-rom-header r)
+;; header -> void (io)
+(define (print-rom-header hdr)
   (for ([i `((,header-prg-pages . "16K PRG-ROM pages")
              (,header-chr-pages . "8K CHR-ROM pages")
-	     (,header-mapper . "Cartridge mapper")
-	     (,header-8kram . "8K RAM pages")
-	     (,header-vertical-mirroring? . "Vertical mirroring")
-	     (,header-battery-backed? . "Battery-backed ram")
-	     (,header-trainer? . "Trainer")
-	     (,header-four-screen? . "Four-screen mirroring"))])
-    (printf "~a\t : ~a~n" ((car i) r) (cdr i))))
+             (,header-mapper . "Cartridge mapper")
+             (,header-8kram . "8K RAM pages")
+             (,header-vertical-mirroring? . "Vertical mirroring")
+             (,header-battery-backed? . "Battery-backed ram")
+             (,header-trainer? . "Trainer")
+             (,header-four-screen? . "Four-screen mirroring"))])
+    (printf "~a\t : ~a~n" ((car i) hdr) (cdr i))))
 
-(define (parse-rom in)
-  (define h (parse-header (read-bytes 16 in)))
-  (rom h
-       (read-bytes (* 16 1024 (header-prg-pages h)) in)
-       (read-bytes (*  8 1024 (header-chr-pages h)) in)))
+;; input-port -> rom
+(define (read-rom in)
+  (define hdr (parse-header (read-bytes 16 in)))
+  (rom hdr
+       (read-bytes (* 16 1024 (header-prg-pages hdr)) in)
+       (read-bytes (* 8 1024 (header-chr-pages hdr)) in)))
 
+;; bytes-> header
 (define (parse-header h)
   (parameterize ([current-input-port (open-input-bytes h)])
     (unless (bytes=? #"NES\x1a" (read-bytes 4))
       (error "Bad ROM File"))
     (let ([prg (read-byte)]
-	  [chr (read-byte)]
-	  [ctl1 (read-byte)]
-	  [ctl2 (read-byte)]
-	  [8kram (read-byte)])
+          [chr (read-byte)]
+          [ctl1 (read-byte)]
+          [ctl2 (read-byte)]
+          [8kram (read-byte)])
       (header prg
               chr
               (bitwise-bit-set? ctl1 0)
@@ -87,11 +91,11 @@
 
 (define (draw-patterns tiles)
   (define factor 2)
-  (define columns 16)  
+  (define columns 16)
   (define surface (make-bitmap (* 8 factor columns)
                                (* 8 factor (/ (length tiles) columns))
                                #f))
-  (define dc (new bitmap-dc% [bitmap surface]))  
+  (define dc (new bitmap-dc% [bitmap surface]))
   (send dc scale factor factor)
   (let draw-tiles ([tiles tiles] [row 0])
     (unless (empty? tiles)

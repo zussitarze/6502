@@ -1,23 +1,21 @@
 #lang racket/base
 
 (require "../assembler.rkt"
-         racket/file
+         "../object.rkt"
          "rom.rkt"
-         (prefix-in tut: "examples/tutorial.rkt"))
+         (prefix-in tut: "examples/tutorial.rkt")
+         racket/file)
 
 (define (inspect-rom romfile)
-  (define r (call-with-input-file romfile parse-rom))
-  (values (print-rom-header (rom-header r))
-          (dump-chr (rom-chr r))))
+  (define rom (call-with-input-file romfile read-rom))
+  (values (print-rom-header (rom-header rom))
+          (dump-chr (rom-chr rom ))))
 
 (define (make-rom obj out)
-  (define (sec n)
-    (or (findf (λ (s) (string=? n (section-name s))) obj)
-        (error "Missing section:" n)))    
-  (let ([hdr (sec "HEADER")]
-        [prg (sec "PROGRAM")]
-        [vec (sec "VECTORS")]
-        [chr (sec "CHARS")])
+  (let ([hdr (find-section obj "HEADER")]
+        [prg (find-section obj "PROGRAM")]
+        [vec (find-section obj "VECTORS")]
+        [chr (find-section obj "CHARS")])
     (for ([s (list hdr prg vec chr)])
       (write-bytes (section-seg s) out))))
 

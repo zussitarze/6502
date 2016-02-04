@@ -107,10 +107,10 @@
   pc)
 
 (define-syntax-rule (offset-program-counter! pc offset)
-  (set-box! pc (8bit+ (if (bitwise-bit-set? offset 7)
-                          (fx- offset 256)
-                          offset)
-                      (unbox pc))))
+  (set-box! pc (16bit+ (if (bitwise-bit-set? offset 7)
+                           (fx- offset 256)
+                           offset)
+                       (unbox pc))))
 
 (define (instr-bcc pc reg st amode loc load store!)
   (unless (cpu-status-c st)
@@ -147,9 +147,9 @@
 (define (instr-bit pc reg st amode loc load store!)
   (let* ([arg (load amode loc)]
          [res (fxand (cpu-register-acc reg) arg)])
-    (set-cpu-status-z! (fx= res 0))
-    (set-cpu-status-v! (bitwise-bit-set? arg 6))
-    (set-cpu-status-s! (bitwise-bit-set? arg 7))))
+    (set-cpu-status-z! st (fx= res 0))
+    (set-cpu-status-v! st (bitwise-bit-set? arg 6))
+    (set-cpu-status-s! st (bitwise-bit-set? arg 7))))
 
 (define (instr-clc pc reg st amode loc load store!)
   (set-cpu-status-c! st #f))
@@ -628,7 +628,7 @@
   (set-box! pc (load 'indirect handler)))
 
 ;; bus int chan -> thread
-(define (execute bus initpc [debug-chan #f])
+(define (execute bus [initpc 0] [ctrl-chan #f] [initial-reset #t])
   (define bpc (box initpc))
   (define register (cpu-register))
   (define status (cpu-status))
@@ -651,8 +651,8 @@
       [(absolute-idx-y)
        (bus (16bit+ loc (cpu-register-yidx register)))]
       [(indirect)
-       (bus (16bit+ (bus loc)
-                    (fxlshift (bus (8bit+ loc 1)) 8)))]
+       (16bit+ (bus loc)
+               (fxlshift (bus (16bit+ loc 1)) 8))]
       [(pre-indexed-x)
        (let* ([iaddr (8bit+ loc (cpu-register-xidx register))]
               [addr (16bit+ (bus iaddr)
@@ -702,8 +702,8 @@
       [(IRQ) (and (not (cpu-status-i status))
                    (interrupt #xFFFE bpc status load store!))])
     (if (cpu-status-b status)
-        (when debug-chan
-          (channel-put debug-chan (list counter register status (bus))))
+        (when ctrl-chan
+          (channel-put ctrl-chan (list counter register status (bus))))
         (let* ([pc (unbox bpc)]
                [i (vector-ref dispatch-tbl (bus pc))]
                [loc (case (instruction-len i)
@@ -711,7 +711,11 @@
                       [(2) (bus (fx+ pc 1))]
                       [(3) (fx+ (bus (fx+ pc 1))
                                 (fxlshift (bus (fx+ pc 2)) 8))])])
+          ;;(printf "pc: ~x op: ~x ~n" pc (bus pc))
           (set-box! bpc (fx+ pc (instruction-len i)))
           ((instruction-fn i) bpc register status (instruction-amode i) loc load store!)
           (runloop (fx+ counter 1)))))
-  (thread runloop))
+  (thread (lambda ()
+            (when initial-reset
+              (thread-send (current-thread) 'RESET))
+            (runloop))))

@@ -16,7 +16,7 @@
        (for ([i initials])
          (bytes-set! mem (car i) (cdr i)))
        (thread-wait
-        (execute (bus-with-memory mem) (section-start (car obj))))
+        (execute (bus-with-memory mem) (section-start (car obj)) #f #f))
        (with-check-info (['obj (dumpobject obj)]
                          ['page0 (dumpbytes (subbytes mem #x000 #x100))]
                          ['page1 (dumpbytes (subbytes mem #x100 #x200))]
@@ -266,3 +266,20 @@
   (adc (! (char->integer #\0)))
   (rts))
  `((#x41 . ,(char->integer #\D))))
+
+(6502-test-case
+ "Indirect/direct jumping"
+ '((#x40 . 0) (#x41 . 0))
+ (6502asm
+  (jmp "step1")
+  (: "step2")
+  (lda (! #xcc))
+  (sta #x40)
+  (brk)
+  (: "step1")
+  (lda (! #xdd))
+  (sta #x41)
+  (jmp (@ "vector"))
+  (: "vector")
+  (% WORD "step2"))
+ `((#x40 . #xcc) (#x41 . #xdd)))

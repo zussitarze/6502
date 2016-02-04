@@ -3,8 +3,9 @@
 (require "bitutils.rkt")
 
 (provide (struct-out section)
-         dumpobject
-         load-object)
+         load-object
+         find-section
+         dumpobject)
 
 (struct section (name start seg)
   #:transparent)
@@ -17,6 +18,10 @@
     (bytes-copy! mem (section-start sec) (section-seg sec))
     (+ prev (bytes-length (section-seg sec))))
   )
+
+(define (find-section obj n)
+  (or (findf (λ (s) (string=? n (section-name s))) obj)
+      (error "Missing section:" n)))
 
 (define (dumpobject obj)
   (map (lambda (s)

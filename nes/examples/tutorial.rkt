@@ -100,8 +100,8 @@
       (sta #x2007)
       (inx)
       (cpx (! 8))
-      (bne "LoadAttributeLoop")      
-                
+      (bne "LoadAttributeLoop")
+
       (lda (! #b10010000)) ; enable NMI, sprites TBL 0, background TBL 1
       (sta #x2000)
 
@@ -115,7 +115,7 @@
       (lda (! 0))
       (sta #x2003) ; set low byte of RAM addr
       (lda (! 2))
-      (sta #x4014) ; set high byte of RAM addr       
+      (sta #x4014) ; set high byte of RAM addr
 
       (: "LatchController")
       (lda (! 1))
@@ -149,7 +149,7 @@
             (: done)))
 
       ;; PPU Cleanup
-      
+
       (lda (! #b10010000)) ;; enable NMI, sprites TBL 0, background TBL 1
       (sta #x2000)
       (lda (! #b00011110)) ;; enable sprites, background, no clipping on left.
@@ -157,16 +157,16 @@
       (lda (! 0)) ;; disable background scrolling
       (sta #x2005)
       (sta #x2005)
-      
+
       (rti)
-      
+
       (% ORG #xe000)
-      
+
       (: "palette")
         ;;background palette
       (% BYTE #x22 #x29 #x1A #x0F   #x22 #x36 #x17 #x0F   #x22 #x30 #x21 #x0F   #x22 #x27 #x17 #x0F)
        ;;sprite palette
-      (% BYTE #x22 #x1C #x15 #x14   #x22 #x02 #x38 #x3C   #x22 #x1C #x15 #x14   #x22 #x02 #x38 #x3C)  
+      (% BYTE #x22 #x1C #x15 #x14   #x22 #x02 #x38 #x3C   #x22 #x1C #x15 #x14   #x22 #x02 #x38 #x3C)
 
       (: "sprites")
       ;;      vert tile attr horiz
@@ -189,16 +189,15 @@
       (% BYTE #x24 #x24 #x24 #x24 #x24 #x24 #x24 #x24 #x24 #x24 #x24 #x24 #x53 #x54 #x24 #x24)
 
       ;;brick bottoms
-      (% BYTE #x24 #x24 #x24 #x24 #x47 #x47 #x24 #x24 #x47 #x47 #x47 #x47 #x47 #x47 #x24 #x24) 
-      (% BYTE #x24 #x24 #x24 #x24 #x24 #x24 #x24 #x24 #x24 #x24 #x24 #x24 #x55 #x56 #x24 #x24)  
+      (% BYTE #x24 #x24 #x24 #x24 #x47 #x47 #x24 #x24 #x47 #x47 #x47 #x47 #x47 #x47 #x24 #x24)
+      (% BYTE #x24 #x24 #x24 #x24 #x24 #x24 #x24 #x24 #x24 #x24 #x24 #x24 #x55 #x56 #x24 #x24)
 
       (: "attribute")
       (% BYTE #b00000000  #b00010000  #b01010000  #b00010000  #b00000000  #b00000000  #b00000000  #b00110000)
       (% BYTE #x24 #x24 #x24 #x24  #x47 #x47 #x24 #x24  #x47 #x47 #x47 #x47  #x47 #x47 #x24 #x24)
       (% BYTE #x24 #x24 #x24 #x24  #x24 #x24 #x24 #x24  #x24 #x24 #x24 #x24  #x55 #x56 #x24 #x24)
-      )   
-   
+      )
+
    (% SECTION "VECTORS" #xfffa 6
       (% WORD "nmi" "reset" 0))
    ))
-
